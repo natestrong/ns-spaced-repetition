@@ -28,6 +28,19 @@ __export(main_exports, {
 });
 module.exports = __toCommonJS(main_exports);
 var import_obsidian = require("obsidian");
+
+// util/util.ts
+function getParametersFromSource(source) {
+  const parameters = [];
+  const regex = /(?<=\{)[^}]+(?=\})/g;
+  let match;
+  while (match = regex.exec(source)) {
+    parameters.push(match[0]);
+  }
+  return parameters;
+}
+
+// main.ts
 var DEFAULT_SETTINGS = {};
 var Repetition = class extends import_obsidian.Plugin {
   async onload() {
@@ -36,6 +49,8 @@ var Repetition = class extends import_obsidian.Plugin {
       console.log("source:", source);
       console.log("el:", el);
       console.log("ctx:", ctx);
+      const parameters = getParametersFromSource(source);
+      console.log("parameters:", parameters);
     });
   }
   async loadSettings() {

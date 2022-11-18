@@ -1,5 +1,6 @@
 import {Plugin} from 'obsidian';
-import {MyPluginSettings} from "./util/interfaces";
+import {MyPluginSettings} from "./utils/interfaces";
+import {getParametersFromSource} from "./utils/utils";
 
 const DEFAULT_SETTINGS: MyPluginSettings = {}
 
@@ -18,6 +19,9 @@ export default class Repetition extends Plugin {
 				console.log('source:', source);
 				console.log('el:', el);
 				console.log('ctx:', ctx);
+
+				const parameters = getParametersFromSource(source);
+				console.log('parameters:', parameters);
 			}
 		);
 	}
