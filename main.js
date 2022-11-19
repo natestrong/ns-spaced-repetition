@@ -29,15 +29,56 @@ __export(main_exports, {
 module.exports = __toCommonJS(main_exports);
 var import_obsidian = require("obsidian");
 
-// util/util.ts
-function getParametersFromSource(source) {
-  const parameters = [];
-  const regex = /(?<=\{)[^}]+(?=\})/g;
-  let match;
-  while (match = regex.exec(source)) {
-    parameters.push(match[0]);
-  }
-  return parameters;
+// utils/utils.ts
+function getDatesFromSource(source) {
+  if (!source || !source.length)
+    return [];
+  const lines = source.split("\n");
+  const dates = [];
+  const dateNow = new Date();
+  lines.forEach((line) => {
+    const number = parseInt(line);
+    const timeUnit = line.split("-")[1].trim();
+    if (isNaN(number) || !timeUnit)
+      return;
+    const date = new Date();
+    let relativeDate;
+    switch (timeUnit) {
+      case "day":
+        date.setDate(dateNow.getDate() - number);
+        relativeDate = number === 1 ? "yesterday" : `${number} days ago`;
+        break;
+      case "week":
+        date.setDate(dateNow.getDate() - number * 7);
+        relativeDate = number === 1 ? "one week ago" : `${number} weeks ago`;
+        break;
+      case "month":
+        date.setMonth(dateNow.getMonth() - number);
+        relativeDate = number === 1 ? "one month ago" : `${number} months ago`;
+        break;
+      case "year":
+        date.setFullYear(dateNow.getFullYear() - number);
+        relativeDate = number === 1 ? "one year ago" : `${number} years ago`;
+        break;
+      default:
+        return;
+    }
+    dates.push({ date: date.toDateString(), relativeDate });
+  });
+  return dates;
+}
+function getFilesForDate(compareDate, files) {
+  const filesForDate = [];
+  files.forEach((file) => {
+    const fileDate = new Date(file.stat.ctime);
+    if (fileDate.toDateString() === compareDate)
+      filesForDate.push(file);
+  });
+  return filesForDate;
+}
+function getFileUri(file) {
+  const uri = encodeURI(file.path);
+  return `obsidian://open?vault=${file.vault.getName()}&file=${uri}`;
 }
 
 // main.ts
@@ -49,8 +90,34 @@ var Repetition = class extends import_obsidian.Plugin {
       console.log("source:", source);
       console.log("el:", el);
       console.log("ctx:", ctx);
-      const parameters = getParametersFromSource(source);
-      console.log("parameters:", parameters);
+      const dates = getDatesFromSource(source);
+      if (!dates.length)
+        return;
+      console.log("dates:", dates);
+      const files = this.app.vault.getMarkdownFiles();
+      const start = performance.now();
+      dates.forEach((date) => {
+        const filesForDate = getFilesForDate(date.date, files);
+        date.files = filesForDate;
+      });
+      const end = performance.now();
+      console.log("time:", end - start);
+      const datesWithFiles = dates.filter((date) => {
+        var _a;
+        return (_a = date.files) == null ? void 0 : _a.length;
+      });
+      const containerEl = el.createEl("div");
+      datesWithFiles.forEach((date) => {
+        var _a;
+        const dateEl = containerEl.createEl("div");
+        dateEl.createEl("h4", { text: `${date.relativeDate}: ${date.date}` });
+        (_a = date.files) == null ? void 0 : _a.forEach((file) => {
+          const fileEl = dateEl.createEl("div");
+          const currentFileLink = this.app.fileManager.generateMarkdownLink(file, ctx.sourcePath);
+          console.log("currentFileLink:", currentFileLink);
+          fileEl.createEl("a", { text: file.basename, href: getFileUri(file) });
+        });
+      });
     });
   }
   async loadSettings() {
